@@ -22,6 +22,18 @@ type Promotion struct {
 var PromotionData = make(map[uint64]Promotion)
 var DataLock = &sync.RWMutex{}
 
+func AddTestPromotion(id uint64, promotionId string, price float64, expirationDate string) {
+	promotion := Promotion{
+		ID:             promotionId,
+		Price:          price,
+		ExpirationDate: expirationDate,
+	}
+
+	DataLock.Lock()
+	PromotionData[id] = promotion
+	DataLock.Unlock()
+}
+
 func LoadDataEvery30Min() {
 	for {
 		absPath, _ := filepath.Abs("data/promotions.csv")
