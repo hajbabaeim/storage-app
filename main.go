@@ -2,18 +2,24 @@ package main
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
-	"strconv"
-
 	"storage/data"
+	"strconv"
 
 	"github.com/labstack/echo/v4"
 )
 
 func main() {
-	go data.LoadDataEvery30Min()
+	var mode string
+	flag.StringVar(&mode, "mode", "concurrent", "define running mode with concurrency or not")
+	if mode == "concurrent" {
+		go data.LoadDataConcurrentEvery30Min() // using for data heavy processes (large csv file)
+	} else {
+		go data.LoadDataEvery30Min()
+	}
 	e := echo.New()
 	e.GET("/promotions/:id", getPromotionByID)
 	e.Start(":1321")
