@@ -1,9 +1,6 @@
 package data
 
 import (
-	"encoding/csv"
-	"io"
-	"os"
 	"path/filepath"
 	"strconv"
 	"sync"
@@ -18,11 +15,6 @@ const (
 var sem = make(chan struct{}, MaxGoroutines) // Semaphore to limit concurrent goroutines
 var once sync.Once
 
-type PromotionWithLineNumber struct {
-	Promotion
-	LineNumber uint64
-}
-
 func LoadDataConcurrentEvery30Min(signal chan<- struct{}) {
 	for {
 		absPath, _ := filepath.Abs("data/promotions.csv")
@@ -35,34 +27,6 @@ func LoadDataConcurrent(filePath string, signal chan<- struct{}) {
 	lines := readCsv(filePath)
 	promotions := processBatches(lines)
 	storeBatches(promotions, signal)
-}
-
-func readCsv(filePath string) <-chan []string {
-	out := make(chan []string)
-
-	go func() {
-		csvFile, err := os.Open(filePath)
-		if err != nil {
-			panic(err)
-		}
-		defer csvFile.Close()
-
-		reader := csv.NewReader(csvFile)
-
-		for {
-			line, err := reader.Read()
-			if err == io.EOF {
-				close(out)
-				break
-			} else if err != nil {
-				panic(err)
-			}
-
-			out <- line
-		}
-	}()
-
-	return out
 }
 
 func processBatches(lines <-chan []string) <-chan PromotionWithLineNumber {

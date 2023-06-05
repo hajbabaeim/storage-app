@@ -2,10 +2,6 @@ package data
 
 import (
 	"encoding/csv"
-	"errors"
-	"fmt"
-	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -19,20 +15,15 @@ type Promotion struct {
 	ExpirationDate string  `json:"expiration_date"`
 }
 
-var PromotionData = make(map[uint64]Promotion)
-var DataLock = &sync.RWMutex{}
-
-func AddTestPromotion(id uint64, promotionId string, price float64, expirationDate string) {
-	promotion := Promotion{
-		ID:             promotionId,
-		Price:          price,
-		ExpirationDate: expirationDate,
-	}
-
-	DataLock.Lock()
-	PromotionData[id] = promotion
-	DataLock.Unlock()
+type PromotionWithLineNumber struct {
+	Promotion
+	LineNumber uint64
 }
+
+var (
+	PromotionData = make(map[uint64]Promotion)
+	DataLock      sync.RWMutex
+)
 
 func LoadDataEvery30Min() {
 	for {
@@ -43,33 +34,63 @@ func LoadDataEvery30Min() {
 }
 
 func LoadData(filePath string) {
-	csvFile, err := os.Open(filePath)
-	if err != nil {
-		log.Fatalln(errors.New(fmt.Sprintf("Error during opening the file: %s", err)))
-	}
-	defer csvFile.Close()
+	lines := readCsv(filePath)
+	promotions := processLines(lines)
+	storeData(promotions)
+}
 
-	reader := csv.NewReader(csvFile)
-	var count uint64 = 0
-	for {
-		line, err := reader.Read()
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			log.Fatalln(errors.New(fmt.Sprintf("Error during reading the file: %s", err)))
+func readCsv(filePath string) <-chan []string {
+	out := make(chan []string)
+
+	go func() {
+		csvFile, err := os.Open(filePath)
+		if err != nil {
+			panic(err)
 		}
+		defer csvFile.Close()
 
-		price, _ := strconv.ParseFloat(line[1], 64)
-
-		promotion := Promotion{
-			ID:             line[0],
-			Price:          price,
-			ExpirationDate: line[2],
+		reader := csv.NewReader(csvFile)
+		for {
+			line, err := reader.Read()
+			if err != nil {
+				close(out)
+				break
+			}
+			out <- line
 		}
+	}()
 
-		DataLock.Lock()
-		PromotionData[count] = promotion
-		count++
-		DataLock.Unlock()
+	return out
+}
+
+func processLines(lines <-chan []string) <-chan PromotionWithLineNumber {
+	out := make(chan PromotionWithLineNumber)
+
+	go func() {
+		var lineNumber uint64 = 1 // Start from 1, because CSV header is not a record.
+		for line := range lines {
+			price, _ := strconv.ParseFloat(line[1], 64)
+			out <- PromotionWithLineNumber{
+				Promotion: Promotion{
+					ID:             line[0],
+					Price:          price,
+					ExpirationDate: line[2],
+				},
+				LineNumber: lineNumber,
+			}
+			lineNumber++
+		}
+		close(out)
+	}()
+
+	return out
+}
+
+func storeData(promotions <-chan PromotionWithLineNumber) {
+	DataLock.Lock()
+	PromotionData = make(map[uint64]Promotion) // Clear the data before loading the new one
+	for p := range promotions {
+		PromotionData[p.LineNumber] = p.Promotion
 	}
+	DataLock.Unlock()
 }
