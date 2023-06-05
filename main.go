@@ -10,18 +10,27 @@ import (
 	"strconv"
 
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 )
 
 func main() {
 	var mode string
 	flag.StringVar(&mode, "mode", "concurrent", "define running mode with concurrency or not")
+
+	e := echo.New()
+	e.Use(middleware.Logger())
+	e.Use(middleware.Recover())
+
+	e.GET("/promotions/:id", getPromotionByID)
+
+	signal := make(chan struct{})
 	if mode == "concurrent" {
-		go data.LoadDataConcurrentEvery30Min() // using for data heavy processes (large csv file)
+		go data.LoadDataConcurrentEvery30Min(signal) // using for data heavy processes (large csv file)
 	} else {
 		go data.LoadDataEvery30Min()
 	}
-	e := echo.New()
-	e.GET("/promotions/:id", getPromotionByID)
+
+	<-signal
 	e.Start(":1321")
 }
 

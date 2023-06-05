@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -15,24 +16,25 @@ const (
 )
 
 var sem = make(chan struct{}, MaxGoroutines) // Semaphore to limit concurrent goroutines
+var once sync.Once
 
 type PromotionWithLineNumber struct {
 	Promotion
 	LineNumber uint64
 }
 
-func LoadDataConcurrentEvery30Min() {
+func LoadDataConcurrentEvery30Min(signal chan<- struct{}) {
 	for {
 		absPath, _ := filepath.Abs("data/promotions.csv")
-		LoadDataConcurrent(absPath)
+		LoadDataConcurrent(absPath, signal)
 		time.Sleep(30 * time.Minute)
 	}
 }
 
-func LoadDataConcurrent(filePath string) {
+func LoadDataConcurrent(filePath string, signal chan<- struct{}) {
 	lines := readCsv(filePath)
 	promotions := processBatches(lines)
-	storeBatches(promotions)
+	storeBatches(promotions, signal)
 }
 
 func readCsv(filePath string) <-chan []string {
@@ -107,11 +109,27 @@ func processBatchConcurrent(batch []Promotion, startLineNumber uint64, out chan<
 	}
 }
 
-func storeBatches(promotions <-chan PromotionWithLineNumber) {
-	DataLock.Lock()
-	defer DataLock.Unlock()
-
+func storeBatches(promotions <-chan PromotionWithLineNumber, signal chan<- struct{}) {
+	temp := make(map[string]Promotion)
 	for p := range promotions {
-		PromotionData[p.LineNumber] = p.Promotion
+		temp[strconv.FormatUint(p.LineNumber, 10)] = p.Promotion
+		if len(temp) == int(BatchSize) {
+			DataLock.Lock()
+			for k, v := range temp {
+				value, _ := strconv.ParseUint(k, 10, 64)
+				PromotionData[value] = v
+			}
+			DataLock.Unlock()
+			temp = make(map[string]Promotion)
+			once.Do(func() { close(signal) })
+		}
+	}
+	if len(temp) > 0 {
+		DataLock.Lock()
+		for k, v := range temp {
+			value, _ := strconv.ParseUint(k, 10, 64)
+			PromotionData[value] = v
+		}
+		DataLock.Unlock()
 	}
 }
