@@ -14,7 +14,7 @@ import (
 )
 
 // Batch size for batch processing
-const batchSize = 10000
+const batchSize = 100000
 
 func parsePrice(priceStr string) (float64, error) {
 	return strconv.ParseFloat(priceStr, 64)
