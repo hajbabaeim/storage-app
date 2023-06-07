@@ -16,7 +16,9 @@ import (
 type Promotion struct {
 	config `json:"-"`
 	// ID of the ent.
-	ID string `json:"id,omitempty"`
+	ID int `json:"id,omitempty"`
+	// Pid holds the value of the "pid" field.
+	Pid string `json:"pid,omitempty"`
 	// Price holds the value of the "price" field.
 	Price float64 `json:"price,omitempty"`
 	// ExpirationDate holds the value of the "expiration_date" field.
@@ -32,6 +34,8 @@ func (*Promotion) scanValues(columns []string) ([]any, error) {
 		case promotion.FieldPrice:
 			values[i] = new(sql.NullFloat64)
 		case promotion.FieldID:
+			values[i] = new(sql.NullInt64)
+		case promotion.FieldPid:
 			values[i] = new(sql.NullString)
 		case promotion.FieldExpirationDate:
 			values[i] = new(sql.NullTime)
@@ -51,10 +55,16 @@ func (pr *Promotion) assignValues(columns []string, values []any) error {
 	for i := range columns {
 		switch columns[i] {
 		case promotion.FieldID:
+			value, ok := values[i].(*sql.NullInt64)
+			if !ok {
+				return fmt.Errorf("unexpected type %T for field id", value)
+			}
+			pr.ID = int(value.Int64)
+		case promotion.FieldPid:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field id", values[i])
+				return fmt.Errorf("unexpected type %T for field pid", values[i])
 			} else if value.Valid {
-				pr.ID = value.String
+				pr.Pid = value.String
 			}
 		case promotion.FieldPrice:
 			if value, ok := values[i].(*sql.NullFloat64); !ok {
@@ -104,6 +114,9 @@ func (pr *Promotion) String() string {
 	var builder strings.Builder
 	builder.WriteString("Promotion(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", pr.ID))
+	builder.WriteString("pid=")
+	builder.WriteString(pr.Pid)
+	builder.WriteString(", ")
 	builder.WriteString("price=")
 	builder.WriteString(fmt.Sprintf("%v", pr.Price))
 	builder.WriteString(", ")

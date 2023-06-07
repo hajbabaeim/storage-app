@@ -10,7 +10,8 @@ import (
 var (
 	// PromotionsColumns holds the columns for the "promotions" table.
 	PromotionsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeString, Unique: true},
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "pid", Type: field.TypeString, Unique: true},
 		{Name: "price", Type: field.TypeFloat64},
 		{Name: "expiration_date", Type: field.TypeTime},
 	}

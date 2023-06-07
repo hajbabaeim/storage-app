@@ -40,7 +40,7 @@ func (pd *PromotionDelete) ExecX(ctx context.Context) int {
 }
 
 func (pd *PromotionDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := sqlgraph.NewDeleteSpec(promotion.Table, sqlgraph.NewFieldSpec(promotion.FieldID, field.TypeString))
+	_spec := sqlgraph.NewDeleteSpec(promotion.Table, sqlgraph.NewFieldSpec(promotion.FieldID, field.TypeInt))
 	if ps := pd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {

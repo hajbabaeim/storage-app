@@ -1,9 +1,12 @@
 package model
 
-import "time"
+import (
+	"time"
+)
 
 type Promotion struct {
-	ID             string
-	Price          float64
-	ExpirationDate time.Time
+	ID             int       `json:"id"`
+	PID            string    `json:"pid"`
+	Price          float64   `json:"price"`
+	ExpirationDate time.Time `json:"expiration_date"`
 }

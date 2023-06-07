@@ -234,7 +234,7 @@ func (c *PromotionClient) UpdateOne(pr *Promotion) *PromotionUpdateOne {
 }
 
 // UpdateOneID returns an update builder for the given id.
-func (c *PromotionClient) UpdateOneID(id string) *PromotionUpdateOne {
+func (c *PromotionClient) UpdateOneID(id int) *PromotionUpdateOne {
 	mutation := newPromotionMutation(c.config, OpUpdateOne, withPromotionID(id))
 	return &PromotionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
@@ -251,7 +251,7 @@ func (c *PromotionClient) DeleteOne(pr *Promotion) *PromotionDeleteOne {
 }
 
 // DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *PromotionClient) DeleteOneID(id string) *PromotionDeleteOne {
+func (c *PromotionClient) DeleteOneID(id int) *PromotionDeleteOne {
 	builder := c.Delete().Where(promotion.ID(id))
 	builder.mutation.id = &id
 	builder.mutation.op = OpDeleteOne
@@ -268,12 +268,12 @@ func (c *PromotionClient) Query() *PromotionQuery {
 }
 
 // Get returns a Promotion entity by its id.
-func (c *PromotionClient) Get(ctx context.Context, id string) (*Promotion, error) {
+func (c *PromotionClient) Get(ctx context.Context, id int) (*Promotion, error) {
 	return c.Query().Where(promotion.ID(id)).Only(ctx)
 }
 
 // GetX is like Get, but panics if an error occurs.
-func (c *PromotionClient) GetX(ctx context.Context, id string) *Promotion {
+func (c *PromotionClient) GetX(ctx context.Context, id int) *Promotion {
 	obj, err := c.Get(ctx, id)
 	if err != nil {
 		panic(err)

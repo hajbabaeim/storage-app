@@ -11,6 +11,8 @@ const (
 	Label = "promotion"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
+	// FieldPid holds the string denoting the pid field in the database.
+	FieldPid = "pid"
 	// FieldPrice holds the string denoting the price field in the database.
 	FieldPrice = "price"
 	// FieldExpirationDate holds the string denoting the expiration_date field in the database.
@@ -22,6 +24,7 @@ const (
 // Columns holds all SQL columns for promotion fields.
 var Columns = []string{
 	FieldID,
+	FieldPid,
 	FieldPrice,
 	FieldExpirationDate,
 }
@@ -42,6 +45,11 @@ type OrderOption func(*sql.Selector)
 // ByID orders the results by the id field.
 func ByID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// ByPid orders the results by the pid field.
+func ByPid(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPid, opts...).ToFunc()
 }
 
 // ByPrice orders the results by the price field.

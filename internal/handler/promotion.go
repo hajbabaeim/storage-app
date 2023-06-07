@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"fmt"
 	"storage-app/internal/service"
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -18,8 +20,9 @@ func NewPromotionHandler(service *service.PromotionService) *PromotionHandler {
 
 func (h *PromotionHandler) GetPromotion(c *fiber.Ctx) error {
 	id := c.Params("id")
-
-	promotion, err := h.service.GetByID(c.Context(), id)
+	fmt.Println("---", id)
+	i, err := strconv.Atoi(id)
+	promotion, err := h.service.GetByID(c.Context(), i)
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"error": "promotion not found",
@@ -28,3 +31,26 @@ func (h *PromotionHandler) GetPromotion(c *fiber.Ctx) error {
 
 	return c.JSON(promotion)
 }
+
+// func (h *PromotionHandler) GetPromotionByDBID(c *fiber.Ctx) error {
+// 	dbID, err := strconv.ParseInt(c.Params("id"), 10, 64)
+// 	if err != nil {
+// 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
+// 			"error": "Invalid database ID",
+// 		})
+// 	}
+
+// 	promotion, err := h.service.GetByDBID(dbID)
+// 	if err != nil {
+// 		if errors.Is(err, sql.ErrNoRows) {
+// 			return c.Status(fiber.StatusNotFound).JSON(&fiber.Map{
+// 				"error": "Promotion not found",
+// 			})
+// 		}
+// 		return c.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
+// 			"error": "Error getting promotion",
+// 		})
+// 	}
+
+// 	return c.JSON(promotion)
+// }

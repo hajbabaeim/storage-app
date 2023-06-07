@@ -20,6 +20,12 @@ type PromotionCreate struct {
 	hooks    []Hook
 }
 
+// SetPid sets the "pid" field.
+func (pc *PromotionCreate) SetPid(s string) *PromotionCreate {
+	pc.mutation.SetPid(s)
+	return pc
+}
+
 // SetPrice sets the "price" field.
 func (pc *PromotionCreate) SetPrice(f float64) *PromotionCreate {
 	pc.mutation.SetPrice(f)
@@ -33,8 +39,8 @@ func (pc *PromotionCreate) SetExpirationDate(t time.Time) *PromotionCreate {
 }
 
 // SetID sets the "id" field.
-func (pc *PromotionCreate) SetID(s string) *PromotionCreate {
-	pc.mutation.SetID(s)
+func (pc *PromotionCreate) SetID(i int) *PromotionCreate {
+	pc.mutation.SetID(i)
 	return pc
 }
 
@@ -72,6 +78,9 @@ func (pc *PromotionCreate) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (pc *PromotionCreate) check() error {
+	if _, ok := pc.mutation.Pid(); !ok {
+		return &ValidationError{Name: "pid", err: errors.New(`ent: missing required field "Promotion.pid"`)}
+	}
 	if _, ok := pc.mutation.Price(); !ok {
 		return &ValidationError{Name: "price", err: errors.New(`ent: missing required field "Promotion.price"`)}
 	}
@@ -92,12 +101,9 @@ func (pc *PromotionCreate) sqlSave(ctx context.Context) (*Promotion, error) {
 		}
 		return nil, err
 	}
-	if _spec.ID.Value != nil {
-		if id, ok := _spec.ID.Value.(string); ok {
-			_node.ID = id
-		} else {
-			return nil, fmt.Errorf("unexpected Promotion.ID type: %T", _spec.ID.Value)
-		}
+	if _spec.ID.Value != _node.ID {
+		id := _spec.ID.Value.(int64)
+		_node.ID = int(id)
 	}
 	pc.mutation.id = &_node.ID
 	pc.mutation.done = true
@@ -107,11 +113,15 @@ func (pc *PromotionCreate) sqlSave(ctx context.Context) (*Promotion, error) {
 func (pc *PromotionCreate) createSpec() (*Promotion, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Promotion{config: pc.config}
-		_spec = sqlgraph.NewCreateSpec(promotion.Table, sqlgraph.NewFieldSpec(promotion.FieldID, field.TypeString))
+		_spec = sqlgraph.NewCreateSpec(promotion.Table, sqlgraph.NewFieldSpec(promotion.FieldID, field.TypeInt))
 	)
 	if id, ok := pc.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = id
+	}
+	if value, ok := pc.mutation.Pid(); ok {
+		_spec.SetField(promotion.FieldPid, field.TypeString, value)
+		_node.Pid = value
 	}
 	if value, ok := pc.mutation.Price(); ok {
 		_spec.SetField(promotion.FieldPrice, field.TypeFloat64, value)
@@ -164,6 +174,10 @@ func (pcb *PromotionCreateBulk) Save(ctx context.Context) ([]*Promotion, error) 
 					return nil, err
 				}
 				mutation.id = &nodes[i].ID
+				if specs[i].ID.Value != nil && nodes[i].ID == 0 {
+					id := specs[i].ID.Value.(int64)
+					nodes[i].ID = int(id)
+				}
 				mutation.done = true
 				return nodes[i], nil
 			})

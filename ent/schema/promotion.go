@@ -15,7 +15,10 @@ type Promotion struct {
 // Fields of the Promotion.
 func (Promotion) Fields() []ent.Field {
 	return []ent.Field{
-		field.String("id").Unique(),
+		field.Int("id").
+			Unique().
+			Immutable(),
+		field.String("pid").Unique(),
 		field.Float("price"),
 		field.Time("expiration_date"),
 	}

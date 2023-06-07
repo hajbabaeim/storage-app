@@ -33,8 +33,11 @@ func NewPromotionRepository(client *ent.Client) *PromotionRepository {
 	}
 }
 
-func (r *PromotionRepository) GetByID(ctx context.Context, id string) (*model.Promotion, error) {
-	p, err := r.client.Promotion.Get(ctx, id)
+func (r *PromotionRepository) GetByID(ctx context.Context, id int) (*model.Promotion, error) {
+	p, err := r.client.Promotion.
+		Query().
+		Where(promotion.ID(id)).
+		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			return nil, errors.New("promotion not found")
@@ -44,31 +47,45 @@ func (r *PromotionRepository) GetByID(ctx context.Context, id string) (*model.Pr
 
 	return &model.Promotion{
 		ID:             p.ID,
+		PID:            p.Pid,
 		Price:          p.Price,
 		ExpirationDate: p.ExpirationDate,
 	}, nil
 }
 
 func (r *PromotionRepository) Insert(ctx context.Context, m *model.Promotion) error {
-	// Check if promotion with the same ID already exists
-	exists, err := r.client.Promotion.Query().Where(
-		promotion.ID(m.ID),
-		promotion.Price(m.Price),
-		promotion.ExpirationDate(m.ExpirationDate),
-	).
-		Exist(ctx)
+	// Check if promotion with the same PID already exists
+	exists, err := r.client.Promotion.Query().Where(promotion.Pid(m.PID)).Exist(ctx)
 	if err != nil {
 		return err
 	}
 	if exists {
 		return nil // Return nil if the promotion already exists
 	}
+
 	_, err = r.client.Promotion.
 		Create().
 		SetID(m.ID).
+		SetPid(m.PID).
 		SetPrice(m.Price).
 		SetExpirationDate(m.ExpirationDate).
 		Save(ctx)
 
 	return err
+}
+
+func (r *PromotionRepository) DeleteByID(ctx context.Context, id int) (int, error) {
+	return r.client.Promotion.Delete().Where(promotion.ID(id)).Exec(ctx)
+}
+
+func (r *PromotionRepository) BeginTransaction(ctx context.Context) (*ent.Tx, error) {
+	return r.client.Tx(ctx)
+}
+
+func (r *PromotionRepository) CommitTransaction(ctx context.Context, tx *ent.Tx) error {
+	return tx.Commit()
+}
+
+func (r *PromotionRepository) RollbackTransaction(ctx context.Context, tx *ent.Tx) error {
+	return tx.Rollback()
 }

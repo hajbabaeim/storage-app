@@ -32,7 +32,8 @@ type PromotionMutation struct {
 	config
 	op              Op
 	typ             string
-	id              *string
+	id              *int
+	pid             *string
 	price           *float64
 	addprice        *float64
 	expiration_date *time.Time
@@ -62,7 +63,7 @@ func newPromotionMutation(c config, op Op, opts ...promotionOption) *PromotionMu
 }
 
 // withPromotionID sets the ID field of the mutation.
-func withPromotionID(id string) promotionOption {
+func withPromotionID(id int) promotionOption {
 	return func(m *PromotionMutation) {
 		var (
 			err   error
@@ -114,13 +115,13 @@ func (m PromotionMutation) Tx() (*Tx, error) {
 
 // SetID sets the value of the id field. Note that this
 // operation is only accepted on creation of Promotion entities.
-func (m *PromotionMutation) SetID(id string) {
+func (m *PromotionMutation) SetID(id int) {
 	m.id = &id
 }
 
 // ID returns the ID value in the mutation. Note that the ID is only available
 // if it was provided to the builder or after it was returned from the database.
-func (m *PromotionMutation) ID() (id string, exists bool) {
+func (m *PromotionMutation) ID() (id int, exists bool) {
 	if m.id == nil {
 		return
 	}
@@ -131,12 +132,12 @@ func (m *PromotionMutation) ID() (id string, exists bool) {
 // That means, if the mutation is applied within a transaction with an isolation level such
 // as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
 // or updated by the mutation.
-func (m *PromotionMutation) IDs(ctx context.Context) ([]string, error) {
+func (m *PromotionMutation) IDs(ctx context.Context) ([]int, error) {
 	switch {
 	case m.op.Is(OpUpdateOne | OpDeleteOne):
 		id, exists := m.ID()
 		if exists {
-			return []string{id}, nil
+			return []int{id}, nil
 		}
 		fallthrough
 	case m.op.Is(OpUpdate | OpDelete):
@@ -144,6 +145,42 @@ func (m *PromotionMutation) IDs(ctx context.Context) ([]string, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetPid sets the "pid" field.
+func (m *PromotionMutation) SetPid(s string) {
+	m.pid = &s
+}
+
+// Pid returns the value of the "pid" field in the mutation.
+func (m *PromotionMutation) Pid() (r string, exists bool) {
+	v := m.pid
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPid returns the old "pid" field's value of the Promotion entity.
+// If the Promotion object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PromotionMutation) OldPid(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPid is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPid requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPid: %w", err)
+	}
+	return oldValue.Pid, nil
+}
+
+// ResetPid resets all changes to the "pid" field.
+func (m *PromotionMutation) ResetPid() {
+	m.pid = nil
 }
 
 // SetPrice sets the "price" field.
@@ -272,7 +309,10 @@ func (m *PromotionMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *PromotionMutation) Fields() []string {
-	fields := make([]string, 0, 2)
+	fields := make([]string, 0, 3)
+	if m.pid != nil {
+		fields = append(fields, promotion.FieldPid)
+	}
 	if m.price != nil {
 		fields = append(fields, promotion.FieldPrice)
 	}
@@ -287,6 +327,8 @@ func (m *PromotionMutation) Fields() []string {
 // schema.
 func (m *PromotionMutation) Field(name string) (ent.Value, bool) {
 	switch name {
+	case promotion.FieldPid:
+		return m.Pid()
 	case promotion.FieldPrice:
 		return m.Price()
 	case promotion.FieldExpirationDate:
@@ -300,6 +342,8 @@ func (m *PromotionMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *PromotionMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
+	case promotion.FieldPid:
+		return m.OldPid(ctx)
 	case promotion.FieldPrice:
 		return m.OldPrice(ctx)
 	case promotion.FieldExpirationDate:
@@ -313,6 +357,13 @@ func (m *PromotionMutation) OldField(ctx context.Context, name string) (ent.Valu
 // type.
 func (m *PromotionMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case promotion.FieldPid:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPid(v)
+		return nil
 	case promotion.FieldPrice:
 		v, ok := value.(float64)
 		if !ok {
@@ -391,6 +442,9 @@ func (m *PromotionMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *PromotionMutation) ResetField(name string) error {
 	switch name {
+	case promotion.FieldPid:
+		m.ResetPid()
+		return nil
 	case promotion.FieldPrice:
 		m.ResetPrice()
 		return nil

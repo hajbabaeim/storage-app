@@ -81,8 +81,8 @@ func (pq *PromotionQuery) FirstX(ctx context.Context) *Promotion {
 
 // FirstID returns the first Promotion ID from the query.
 // Returns a *NotFoundError when no Promotion ID was found.
-func (pq *PromotionQuery) FirstID(ctx context.Context) (id string, err error) {
-	var ids []string
+func (pq *PromotionQuery) FirstID(ctx context.Context) (id int, err error) {
+	var ids []int
 	if ids, err = pq.Limit(1).IDs(setContextOp(ctx, pq.ctx, "FirstID")); err != nil {
 		return
 	}
@@ -94,7 +94,7 @@ func (pq *PromotionQuery) FirstID(ctx context.Context) (id string, err error) {
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (pq *PromotionQuery) FirstIDX(ctx context.Context) string {
+func (pq *PromotionQuery) FirstIDX(ctx context.Context) int {
 	id, err := pq.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -132,8 +132,8 @@ func (pq *PromotionQuery) OnlyX(ctx context.Context) *Promotion {
 // OnlyID is like Only, but returns the only Promotion ID in the query.
 // Returns a *NotSingularError when more than one Promotion ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (pq *PromotionQuery) OnlyID(ctx context.Context) (id string, err error) {
-	var ids []string
+func (pq *PromotionQuery) OnlyID(ctx context.Context) (id int, err error) {
+	var ids []int
 	if ids, err = pq.Limit(2).IDs(setContextOp(ctx, pq.ctx, "OnlyID")); err != nil {
 		return
 	}
@@ -149,7 +149,7 @@ func (pq *PromotionQuery) OnlyID(ctx context.Context) (id string, err error) {
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (pq *PromotionQuery) OnlyIDX(ctx context.Context) string {
+func (pq *PromotionQuery) OnlyIDX(ctx context.Context) int {
 	id, err := pq.OnlyID(ctx)
 	if err != nil {
 		panic(err)
@@ -177,7 +177,7 @@ func (pq *PromotionQuery) AllX(ctx context.Context) []*Promotion {
 }
 
 // IDs executes the query and returns a list of Promotion IDs.
-func (pq *PromotionQuery) IDs(ctx context.Context) (ids []string, err error) {
+func (pq *PromotionQuery) IDs(ctx context.Context) (ids []int, err error) {
 	if pq.ctx.Unique == nil && pq.path != nil {
 		pq.Unique(true)
 	}
@@ -189,7 +189,7 @@ func (pq *PromotionQuery) IDs(ctx context.Context) (ids []string, err error) {
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (pq *PromotionQuery) IDsX(ctx context.Context) []string {
+func (pq *PromotionQuery) IDsX(ctx context.Context) []int {
 	ids, err := pq.IDs(ctx)
 	if err != nil {
 		panic(err)
@@ -261,12 +261,12 @@ func (pq *PromotionQuery) Clone() *PromotionQuery {
 // Example:
 //
 //	var v []struct {
-//		Price float64 `json:"price,omitempty"`
+//		Pid string `json:"pid,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.Promotion.Query().
-//		GroupBy(promotion.FieldPrice).
+//		GroupBy(promotion.FieldPid).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (pq *PromotionQuery) GroupBy(field string, fields ...string) *PromotionGroupBy {
@@ -284,11 +284,11 @@ func (pq *PromotionQuery) GroupBy(field string, fields ...string) *PromotionGrou
 // Example:
 //
 //	var v []struct {
-//		Price float64 `json:"price,omitempty"`
+//		Pid string `json:"pid,omitempty"`
 //	}
 //
 //	client.Promotion.Query().
-//		Select(promotion.FieldPrice).
+//		Select(promotion.FieldPid).
 //		Scan(ctx, &v)
 func (pq *PromotionQuery) Select(fields ...string) *PromotionSelect {
 	pq.ctx.Fields = append(pq.ctx.Fields, fields...)
@@ -364,7 +364,7 @@ func (pq *PromotionQuery) sqlCount(ctx context.Context) (int, error) {
 }
 
 func (pq *PromotionQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := sqlgraph.NewQuerySpec(promotion.Table, promotion.Columns, sqlgraph.NewFieldSpec(promotion.FieldID, field.TypeString))
+	_spec := sqlgraph.NewQuerySpec(promotion.Table, promotion.Columns, sqlgraph.NewFieldSpec(promotion.FieldID, field.TypeInt))
 	_spec.From = pq.sql
 	if unique := pq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique

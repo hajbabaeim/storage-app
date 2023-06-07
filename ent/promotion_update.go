@@ -28,6 +28,12 @@ func (pu *PromotionUpdate) Where(ps ...predicate.Promotion) *PromotionUpdate {
 	return pu
 }
 
+// SetPid sets the "pid" field.
+func (pu *PromotionUpdate) SetPid(s string) *PromotionUpdate {
+	pu.mutation.SetPid(s)
+	return pu
+}
+
 // SetPrice sets the "price" field.
 func (pu *PromotionUpdate) SetPrice(f float64) *PromotionUpdate {
 	pu.mutation.ResetPrice()
@@ -80,13 +86,16 @@ func (pu *PromotionUpdate) ExecX(ctx context.Context) {
 }
 
 func (pu *PromotionUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := sqlgraph.NewUpdateSpec(promotion.Table, promotion.Columns, sqlgraph.NewFieldSpec(promotion.FieldID, field.TypeString))
+	_spec := sqlgraph.NewUpdateSpec(promotion.Table, promotion.Columns, sqlgraph.NewFieldSpec(promotion.FieldID, field.TypeInt))
 	if ps := pu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
+	}
+	if value, ok := pu.mutation.Pid(); ok {
+		_spec.SetField(promotion.FieldPid, field.TypeString, value)
 	}
 	if value, ok := pu.mutation.Price(); ok {
 		_spec.SetField(promotion.FieldPrice, field.TypeFloat64, value)
@@ -115,6 +124,12 @@ type PromotionUpdateOne struct {
 	fields   []string
 	hooks    []Hook
 	mutation *PromotionMutation
+}
+
+// SetPid sets the "pid" field.
+func (puo *PromotionUpdateOne) SetPid(s string) *PromotionUpdateOne {
+	puo.mutation.SetPid(s)
+	return puo
 }
 
 // SetPrice sets the "price" field.
@@ -182,7 +197,7 @@ func (puo *PromotionUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (puo *PromotionUpdateOne) sqlSave(ctx context.Context) (_node *Promotion, err error) {
-	_spec := sqlgraph.NewUpdateSpec(promotion.Table, promotion.Columns, sqlgraph.NewFieldSpec(promotion.FieldID, field.TypeString))
+	_spec := sqlgraph.NewUpdateSpec(promotion.Table, promotion.Columns, sqlgraph.NewFieldSpec(promotion.FieldID, field.TypeInt))
 	id, ok := puo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Promotion.id" for update`)}
@@ -206,6 +221,9 @@ func (puo *PromotionUpdateOne) sqlSave(ctx context.Context) (_node *Promotion, e
 				ps[i](selector)
 			}
 		}
+	}
+	if value, ok := puo.mutation.Pid(); ok {
+		_spec.SetField(promotion.FieldPid, field.TypeString, value)
 	}
 	if value, ok := puo.mutation.Price(); ok {
 		_spec.SetField(promotion.FieldPrice, field.TypeFloat64, value)

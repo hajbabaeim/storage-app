@@ -38,12 +38,16 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to connect database")
 	}
-
+	fmt.Println("-----> step 1")
 	promotionRepository := repository.NewPromotionRepository(dbClient)
+	fmt.Println("-----> step 2")
 	promotionService := service.NewPromotionService(promotionRepository)
+	fmt.Println("-----> step 3")
 	promotionHandler := handler.NewPromotionHandler(promotionService)
+	fmt.Println("-----> step 4")
 
 	app.Get("/promotions/:id", promotionHandler.GetPromotion)
+	fmt.Println("-----> step 5")
 
 	log.Info().Msg("Starting CSV import process")
 	absPath, _ := filepath.Abs(csvPath)
@@ -51,6 +55,9 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to import CSV data")
 	}
 	port := os.Getenv("SERVER_PORT")
+	fmt.Println("-----> step 6", port)
 	log.Info().Msg(fmt.Sprintf("Starting server on port %s", port))
-	app.Listen(fmt.Sprintf(":%s", port))
+	if err := app.Listen(fmt.Sprintf(":%s", port)); err != nil {
+		log.Fatal().Err(err).Msg("Failed to start server")
+	}
 }
