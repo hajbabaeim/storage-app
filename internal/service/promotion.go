@@ -17,6 +17,16 @@ func NewPromotionService(repo *repository.PromotionRepository) *PromotionService
 	}
 }
 
+// InsertBatch inserts multiple promotions into the database.
+func (s *PromotionService) InsertBatch(ctx context.Context, promotions []*model.Promotion) error {
+	for _, promotion := range promotions {
+		if err := s.repo.Insert(ctx, promotion); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (svc *PromotionService) GetPromotion(ctx context.Context, id int) (*model.Promotion, error) {
 	return svc.repo.GetByID(ctx, id)
 }

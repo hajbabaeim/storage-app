@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"storage-app/internal/service"
 	"strconv"
 
@@ -20,7 +19,6 @@ func NewPromotionHandler(service *service.PromotionService) *PromotionHandler {
 
 func (h *PromotionHandler) GetPromotion(c *fiber.Ctx) error {
 	id := c.Params("id")
-	fmt.Println("---", id)
 	i, err := strconv.Atoi(id)
 	promotion, err := h.service.GetByID(c.Context(), i)
 	if err != nil {

@@ -3,6 +3,7 @@ package main
 //go:generate go run entgo.io/ent/cmd/ent generate ./ent/schema
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -38,24 +39,28 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to connect database")
 	}
-	fmt.Println("-----> step 1")
 	promotionRepository := repository.NewPromotionRepository(dbClient)
-	fmt.Println("-----> step 2")
 	promotionService := service.NewPromotionService(promotionRepository)
-	fmt.Println("-----> step 3")
 	promotionHandler := handler.NewPromotionHandler(promotionService)
-	fmt.Println("-----> step 4")
 
 	app.Get("/promotions/:id", promotionHandler.GetPromotion)
-	fmt.Println("-----> step 5")
 
 	log.Info().Msg("Starting CSV import process")
 	absPath, _ := filepath.Abs(csvPath)
-	if err := csvimporter.ImportCSV(absPath, promotionService); err != nil {
-		log.Fatal().Err(err).Msg("failed to import CSV data")
+
+	promotionBatches, err := csvimporter.ImportCSV(absPath)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to import CSV")
+		return
 	}
+
+	go csvimporter.BatchInsert(context.Background(), promotionService, promotionBatches)
+
+	// if err := csvimporter.ImportCSV(absPath, promotionService); err != nil {
+	// 	log.Fatal().Err(err).Msg("failed to import CSV data")
+	// }
+
 	port := os.Getenv("SERVER_PORT")
-	fmt.Println("-----> step 6", port)
 	log.Info().Msg(fmt.Sprintf("Starting server on port %s", port))
 	if err := app.Listen(fmt.Sprintf(":%s", port)); err != nil {
 		log.Fatal().Err(err).Msg("Failed to start server")

@@ -3,13 +3,14 @@ package csvimporter
 import (
 	"context"
 	"encoding/csv"
-	"fmt"
 	"io"
 	"os"
 	"storage-app/internal/model"
 	"storage-app/internal/service"
 	"strconv"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 // Batch size for batch processing
@@ -41,7 +42,6 @@ func ImportCSVConcurrent(file string, promotionSvc *service.PromotionService) er
 
 	ctx := context.Background()
 
-	fmt.Println("-----> ImportCSV 1")
 	// Delete and insert in batches
 	for i := 0; i < len(records); i += batchSize {
 		end := i + batchSize
@@ -49,14 +49,12 @@ func ImportCSVConcurrent(file string, promotionSvc *service.PromotionService) er
 			end = len(records)
 		}
 
-		fmt.Println("-----> ImportCSV 2")
 		// Start a transaction
 		tx, err := promotionSvc.BeginTransaction(ctx)
 		if err != nil {
 			return err
 		}
 
-		fmt.Println("-----> ImportCSV 3")
 		// Delete a batch
 		for _, record := range records[i:end] {
 			i, err := strconv.Atoi(record[0])
@@ -67,7 +65,6 @@ func ImportCSVConcurrent(file string, promotionSvc *service.PromotionService) er
 			}
 		}
 
-		fmt.Println("-----> ImportCSV 4")
 		// Insert a batch
 		for _, record := range records[i:end] {
 			price, err := parsePrice(record[1])
@@ -102,67 +99,76 @@ func ImportCSVConcurrent(file string, promotionSvc *service.PromotionService) er
 	return nil
 }
 
-func ImportCSV(filePath string, svc *service.PromotionService) error {
+func ImportCSV(filePath string) (<-chan []*model.Promotion, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	defer file.Close()
 
 	reader := csv.NewReader(file)
+	out := make(chan []*model.Promotion)
+	go func() {
+		defer close(out)
+		defer file.Close()
 
-	batch := make([]*model.Promotion, 0, batchSize)
+		batch := make([]*model.Promotion, 0, batchSize)
 
-	lineNumber := 1
-	for {
-		record, err := reader.Read()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return err
-		}
-
-		price, err := strconv.ParseFloat(record[1], 64)
-		if err != nil {
-			return err
-		}
-
-		expirationDate, err := time.Parse("2006-01-02 15:04:05 -0700 MST", record[2])
-		if err != nil {
-			return err
-		}
-
-		batch = append(batch, &model.Promotion{
-			ID:             lineNumber,
-			PID:            record[0],
-			Price:          price,
-			ExpirationDate: expirationDate,
-		})
-
-		if len(batch) >= batchSize {
-			if err := insertBatch(context.Background(), svc, batch); err != nil {
-				return err
+		lineNumber := 1
+		for {
+			record, err := reader.Read()
+			if err == io.EOF {
+				if len(batch) > 0 {
+					out <- batch
+				}
+				break
 			}
-			batch = batch[:0]
+			if err != nil {
+				log.Error().Err(err).Msg("Error during read CSV")
+				continue
+			}
+
+			price, err := strconv.ParseFloat(record[1], 64)
+			if err != nil {
+				log.Error().Err(err).Msg("Error during read CSV")
+				continue
+			}
+
+			expirationDate, err := time.Parse("2006-01-02 15:04:05 -0700 MST", record[2])
+			if err != nil {
+				log.Error().Err(err).Msg("Error during read CSV")
+				continue
+			}
+
+			batch = append(batch, &model.Promotion{
+				ID:             lineNumber,
+				PID:            record[0],
+				Price:          price,
+				ExpirationDate: expirationDate,
+			})
+
+			if len(batch) >= batchSize {
+				out <- batch
+				batch = make([]*model.Promotion, 0, batchSize)
+			}
 		}
+	}()
 
-		lineNumber++
-	}
-
-	// Insert the remaining data
-	if len(batch) > 0 {
-		if err := insertBatch(context.Background(), svc, batch); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return out, nil
 }
 
-func insertBatch(ctx context.Context, svc *service.PromotionService, batch []*model.Promotion) error {
-	for _, promotion := range batch {
-		if err := svc.AddPromotion(ctx, promotion); err != nil {
+// func insertBatch(ctx context.Context, svc *service.PromotionService, batch []*model.Promotion) error {
+// 	for _, promotion := range batch {
+// 		if err := svc.AddPromotion(ctx, promotion); err != nil {
+// 			return err
+// 		}
+// 	}
+// 	return nil
+// }
+
+func BatchInsert(ctx context.Context, svc *service.PromotionService, batches <-chan []*model.Promotion) error {
+	for batch := range batches {
+		err := svc.InsertBatch(ctx, batch)
+		if err != nil {
 			return err
 		}
 	}
