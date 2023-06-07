@@ -54,8 +54,12 @@ func (r *PromotionRepository) GetByID(ctx context.Context, id int) (*model.Promo
 }
 
 func (r *PromotionRepository) Insert(ctx context.Context, m *model.Promotion) error {
-	// Check if promotion with the same PID already exists
-	exists, err := r.client.Promotion.Query().Where(promotion.Pid(m.PID)).Exist(ctx)
+	// Check if promotion with the same info already exists
+	exists, err := r.client.Promotion.Query().Where(
+		promotion.Pid(m.PID),
+		promotion.ID(m.ID),
+		promotion.Price(m.Price),
+	).Exist(ctx)
 	if err != nil {
 		return err
 	}
@@ -78,14 +82,34 @@ func (r *PromotionRepository) DeleteByID(ctx context.Context, id int) (int, erro
 	return r.client.Promotion.Delete().Where(promotion.ID(id)).Exec(ctx)
 }
 
-func (r *PromotionRepository) BeginTransaction(ctx context.Context) (*ent.Tx, error) {
-	return r.client.Tx(ctx)
-}
-
 func (r *PromotionRepository) CommitTransaction(ctx context.Context, tx *ent.Tx) error {
 	return tx.Commit()
 }
 
+func (r *PromotionRepository) BatchInsert(ctx context.Context, batch []*model.Promotion) error {
+	for _, p := range batch {
+		_, err := r.client.Promotion.
+			Create().
+			SetID(p.ID).
+			SetPid(p.PID).
+			SetPrice(p.Price).
+			SetExpirationDate(p.ExpirationDate).
+			Save(ctx)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *PromotionRepository) BeginTransaction(ctx context.Context) (*ent.Tx, error) {
+	return r.client.Tx(ctx)
+}
+
 func (r *PromotionRepository) RollbackTransaction(ctx context.Context, tx *ent.Tx) error {
 	return tx.Rollback()
+}
+
+func (r *PromotionRepository) DeleteAll(ctx context.Context) (int, error) {
+	return r.client.Promotion.Delete().Exec(ctx)
 }

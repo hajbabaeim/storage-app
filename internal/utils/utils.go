@@ -1,8 +1,10 @@
 package utils
 
 import (
-	"encoding/csv"
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
+	"io"
 	"os"
 
 	_ "github.com/lib/pq"
@@ -40,49 +42,18 @@ func ConnectionURLBuilder(str string) (string, error) {
 	return url, nil
 }
 
-func ReadCSVFromFile(filePath string) (*csv.Reader, error) {
+func CalculateMD5(filePath string) (string, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	r := csv.NewReader(file)
-	return r, nil
+	defer file.Close()
+
+	hash := md5.New()
+	if _, err := io.Copy(hash, file); err != nil {
+		return "", err
+	}
+
+	hashInBytes := hash.Sum(nil)[:16]
+	return hex.EncodeToString(hashInBytes), nil
 }
-
-// func ReadCSV(client *ent.Client, filePath string) error {
-// 	file, err := os.Open(filePath)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	defer file.Close()
-
-// 	lines, err := csv.NewReader(file).ReadAll()
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	for _, line := range lines {
-// 		price, err := strconv.ParseFloat(line[1], 64)
-// 		if err != nil {
-// 			return err
-// 		}
-
-// 		expirationDate, err := time.Parse(time.RFC3339, line[2])
-// 		if err != nil {
-// 			return err
-// 		}
-
-// 		_, err = client.Promotion.
-// 			Create().
-// 			SetUUID(line[0]).
-// 			SetPrice(price).
-// 			SetExpirationDate(expirationDate).
-// 			Save(context.Background())
-
-// 		if err != nil {
-// 			return err
-// 		}
-// 	}
-
-// 	return nil
-// }

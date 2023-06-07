@@ -17,6 +17,22 @@ func NewPromotionService(repo *repository.PromotionRepository) *PromotionService
 	}
 }
 
+func (s *PromotionService) BatchInsert(ctx context.Context, batch []*model.Promotion) error {
+	return s.repo.BatchInsert(ctx, batch)
+}
+
+func (s *PromotionService) BeginTransaction(ctx context.Context) (*ent.Tx, error) {
+	return s.repo.BeginTransaction(ctx)
+}
+
+func (s *PromotionService) RollbackTransaction(ctx context.Context, tx *ent.Tx) error {
+	return s.repo.RollbackTransaction(ctx, tx)
+}
+
+func (s *PromotionService) DeleteAll(ctx context.Context) (int, error) {
+	return s.repo.DeleteAll(ctx)
+}
+
 // InsertBatch inserts multiple promotions into the database.
 func (s *PromotionService) InsertBatch(ctx context.Context, promotions []*model.Promotion) error {
 	for _, promotion := range promotions {
@@ -47,18 +63,6 @@ func (s *PromotionService) Insert(ctx context.Context, promotion *model.Promotio
 	return s.repo.Insert(ctx, promotion)
 }
 
-func (s *PromotionService) BeginTransaction(ctx context.Context) (*ent.Tx, error) {
-	return s.repo.BeginTransaction(ctx)
-}
-
 func (s *PromotionService) CommitTransaction(ctx context.Context, tx *ent.Tx) error {
 	return s.repo.CommitTransaction(ctx, tx)
 }
-
-func (s *PromotionService) RollbackTransaction(ctx context.Context, tx *ent.Tx) error {
-	return s.repo.RollbackTransaction(ctx, tx)
-}
-
-// func (s *PromotionService) GetByDBID(ctx context.Context, dbID int64) (*model.Promotion, error) {
-// 	return s.repo.GetByDBID(ctx, dbID)
-// }

@@ -12,6 +12,7 @@ import (
 	"storage-app/internal/service"
 	"storage-app/internal/utils"
 	"storage-app/pkg/csvimporter"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -47,18 +48,52 @@ func main() {
 
 	log.Info().Msg("Starting CSV import process")
 	absPath, _ := filepath.Abs(csvPath)
+	ticker := time.NewTicker(30 * time.Minute)
+	quit := make(chan struct{})
+	go func() {
+		var previousChecksum string
+		for {
+			select {
+			case <-ticker.C:
+				currentChecksum, err := utils.CalculateMD5(absPath)
+				if err != nil {
+					log.Error().Err(err).Msg("Failed to calculate MD5 checksum of the file")
+					continue
+				}
 
-	promotionBatches, err := csvimporter.ImportCSV(absPath)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to import CSV")
-		return
-	}
+				if currentChecksum == previousChecksum {
+					log.Info().Msg("CSV file does not change, just update the info if does not exist")
+					err = csvimporter.ImportCSV(context.Background(), absPath, promotionService, false)
+					if err != nil {
+						log.Error().Err(err).Msg("Failed to import CSV")
+						continue
+					}
+					continue
+				}
 
-	go csvimporter.BatchInsert(context.Background(), promotionService, promotionBatches)
+				log.Info().Msg("CSV file has been changed, so it should be replaced")
+				err = csvimporter.ImportCSV(context.Background(), absPath, promotionService, true)
+				if err != nil {
+					log.Error().Err(err).Msg("Failed to import CSV")
+					continue
+				}
 
-	// if err := csvimporter.ImportCSV(absPath, promotionService); err != nil {
-	// 	log.Fatal().Err(err).Msg("failed to import CSV data")
+				// Update the previousChecksum with the current one after a successful import
+				previousChecksum = currentChecksum
+
+			case <-quit:
+				ticker.Stop()
+				return
+			}
+		}
+	}()
+
+	// promotionBatches, err := csvimporter.ImportCSVWithoutDeletion(absPath)
+	// if err != nil {
+	// 	log.Error().Err(err).Msg("Failed to import CSV")
+	// 	return
 	// }
+	// go csvimporter.BatchInsert(context.Background(), promotionService, promotionBatches)
 
 	port := os.Getenv("SERVER_PORT")
 	log.Info().Msg(fmt.Sprintf("Starting server on port %s", port))
