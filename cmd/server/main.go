@@ -14,7 +14,9 @@ import (
 	"storage-app/pkg/csvimporter"
 	"time"
 
+	"github.com/go-redis/redis"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/joho/godotenv"
 	"github.com/rs/zerolog/log"
@@ -30,8 +32,30 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to connect database")
 	}
+
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "",
+		DB:       0,
+	})
+
 	app := fiber.New()
 	app.Use(logger.New())
+	// Use rate limiter for api to perform in peak periods
+	app.Use(limiter.New(limiter.Config{
+		Max:        50,
+		Expiration: 1 * time.Minute,
+		KeyGenerator: func(c *fiber.Ctx) string {
+			return c.IP()
+		},
+		LimitReached: func(c *fiber.Ctx) error {
+			return c.SendStatus(fiber.StatusTooManyRequests)
+		},
+		SkipFailedRequests:     false,
+		SkipSuccessfulRequests: false,
+		LimiterMiddleware:      limiter.FixedWindow{},
+	}))
+
 	postgresConnURL, errCreateDBUrl := utils.ConnectionURLBuilder("postgres")
 	if errCreateDBUrl != nil {
 		log.Fatal().Err(errCreateDBUrl).Msg("failed to get database uri")
@@ -41,7 +65,7 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to connect database")
 	}
 	promotionRepository := repository.NewPromotionRepository(dbClient)
-	promotionService := service.NewPromotionService(promotionRepository)
+	promotionService := service.NewPromotionService(promotionRepository, rdb)
 	promotionHandler := handler.NewPromotionHandler(promotionService)
 
 	app.Get("/promotions/:id", promotionHandler.GetPromotion)
