@@ -8,16 +8,16 @@ Storage App is a simple and efficient RESTful API server that manages promotion 
 - [x] CRUD operations for promotion data
 - [x] CSV data import
 - [x] Data persistence with PostgreSQL
-- [x] Dockerized application
 - [x] Batch data processing
 - [x] Redis caching for efficient data retrieval
+- [x] Dockerized application
 
 ## Prerequisites
 
 - Go (v1.17 or newer)
-- Docker & Docker Compose
-- Redis
 - PostgreSQL
+- Redis
+- Docker
 
 ## Installation & Running
 
@@ -44,12 +44,6 @@ Storage App is a simple and efficient RESTful API server that manages promotion 
 
    ```bash
    ./storage-app
-   ```
-
-5. Or, simply you can build and run the application with Docker Compose:
-
-   ```bash
-   docker-compose up --build
    ```
 
 The application will be accessible at `localhost:1321`.
