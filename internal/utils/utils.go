@@ -19,14 +19,18 @@ func ConnectionURLBuilder(str string) (string, error) {
 	switch str {
 	case "postgres":
 		// url for postgre connection
-		url = fmt.Sprintf("postgresql://%s:%s@%s:%s/%s?sslmode=%s", os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), os.Getenv("POSTGRES_HOST"), os.Getenv("POSTGRES_PORT"), os.Getenv("POSTGRES_DB"), os.Getenv("POSTGRES_SSL_MODE"))
+		if os.Getenv("STAGE_STATUS") == "docker" {
+			url = fmt.Sprintf("postgresql://%s:%s@postgres:%s/%s?sslmode=%s", os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), os.Getenv("POSTGRES_PORT"), os.Getenv("POSTGRES_DB"), os.Getenv("POSTGRES_SSL_MODE"))
+		} else {
+			url = fmt.Sprintf("postgresql://%s:%s@%s:%s/%s?sslmode=%s", os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), os.Getenv("POSTGRES_HOST"), os.Getenv("POSTGRES_PORT"), os.Getenv("POSTGRES_DB"), os.Getenv("POSTGRES_SSL_MODE"))
+		}
 	case "redis":
 		// url for redis connection
-		url = fmt.Sprintf(
-			"%s:%s",
-			os.Getenv("REDIS_HOST"),
-			os.Getenv("REDIS_PORT"),
-		)
+		if os.Getenv("STAGE_STATUS") == "docker" {
+			url = fmt.Sprintf("redis:%s", os.Getenv("REDIS_PORT"))
+		} else {
+			url = fmt.Sprintf("%s:%s", os.Getenv("REDIS_HOST"), os.Getenv("REDIS_PORT"))
+		}
 	case "fiber":
 		// url for fiber connection
 		url = fmt.Sprintf(

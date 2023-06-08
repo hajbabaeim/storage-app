@@ -24,17 +24,27 @@ import (
 
 const (
 	csvPath = "data/promotions.csv"
-	dbUri   = "postgresql://<username>:<password>@localhost:5432/<db>?sslmode=disable"
 )
+
+func fileExists(filename string) bool {
+	info, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
+}
 
 func main() {
 	err := godotenv.Load(".env")
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to connect database")
 	}
-
+	redisConnURL, errCreateRedisUrl := utils.ConnectionURLBuilder("redis")
+	if errCreateRedisUrl != nil {
+		log.Fatal().Err(errCreateRedisUrl).Msg("failed to get database uri")
+	}
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
+		Addr:     redisConnURL,
 		Password: "",
 		DB:       0,
 	})
@@ -72,6 +82,11 @@ func main() {
 
 	log.Info().Msg("Starting CSV import process")
 	absPath, _ := filepath.Abs(csvPath)
+	if !fileExists(absPath) {
+		log.Info().Msg("File does not exist")
+	} else {
+		log.Info().Msg("File exists")
+	}
 	ticker := time.NewTicker(30 * time.Minute)
 	quit := make(chan struct{})
 	go func() {
