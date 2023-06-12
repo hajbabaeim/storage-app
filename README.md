@@ -2,6 +2,10 @@
 
 Storage App is a simple and efficient RESTful API server that manages promotion data.
 
+## Author
+
+Mo Hajbabaei
+
 ## Features
 
 - [x] RESTful API (using Fiber framework)
